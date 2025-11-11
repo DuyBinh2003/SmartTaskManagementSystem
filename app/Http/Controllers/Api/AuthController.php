@@ -12,19 +12,31 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         // Registration logic
+        // Validate input
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'role_id' => 'nullable|exists:roles,id',
         ]);
+
+        // Create user
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => bcrypt($validated['password']),
         ]);
+
+        // Assign role if provided
+        if (isset($validated['role_id'])) {
+            $user->roles()->attach($validated['role_id']);
+        }
+
+        // (Nếu dùng Sanctum)
         $token = $user->createToken('api-token')->plainTextToken;
+
         return response()->json([
-            'user' => $user,
+            'user' => $user->load('roles'),
             'token' => $token,
         ], 201);
     }
